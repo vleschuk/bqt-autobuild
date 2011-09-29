@@ -14,6 +14,8 @@ echo "Project path is $PROJECT_PATH, dependencies will be placed to $DEP_PATH"
 
 COMPILER_PATH=$HOME/toolchains/mingw_w64
 mkdir -p $COMPILER_PATH
+CROSS_HOST=x86_64-w64-mingw32
+CROSS_TRIPLET=${CROSS_HOST}-
 
 tmpdir="$start_dir/.tmp"
 
@@ -54,8 +56,7 @@ echo "Done"
 cd -
 export PATH=$COMPILER_PATH/bin:$PATH
 CXX=x86_64-w64-mingw32-g++
-CROSS_HOST=x86_64-w64-mingw32
-CROSS_TRIPLET=${CROSS_HOST}-
+
 echo "Installed cross-compiler"
 $CXX --version
 
