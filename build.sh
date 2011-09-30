@@ -159,7 +159,6 @@ echo "fontconfig installed"
 echo "All additional libs were installed into toolchain"
 #########
 
-exit 0 # REMOVE IT 
 
 # build project dependencies
 
@@ -202,7 +201,27 @@ echo "berkley-db installed"
 ###
 
 # pthread
-
+echo "Installing pthreads package"
+pthreads_ver='20100604'
+pthreads_arc="pthreads-$pthreads_ver.zip"
+pthreads_url="http://freefr.dl.sourceforge.net/project/mingw-w64/External%20binary%20packages%20%28Win64%20hosted%29/pthreads/$pthreads_arc"
+pthreads_md5='de47dabb5d8af7105bb4396c9ef38305'
+echo "Downloading pthreads package"
+get_archive $pthreads_url $pthreads_arc $pthreads_md5
+pthreads_build_dir="pthreads-$pthreads_ver"
+unzip $pthreads_arc
+cd $pthreads_build_dir/source
+sed -i -e "s/CROSS_PATH=.*/CROSS_PATH=$COMPILER_PATH/" build_w64.sh
+sh build_w64.sh
+PTW32_INCLUDE=$DEP_PATH/pthreads/include
+PTW32_LIB=$DEP_PATH/pthreads/lib
+mkdir -p $PTW32_INCLUDE $PTW32_LIB
+export PTW32_INCLUDE PTW32_LIB # for future use when building boost
+cp pthreads/*.h $PTW32_INCLUDE
+cp pthreads/*.dll $PTW32_LIB
+cp pthreads/*.a $PTW32_LIB
+cd -
+echo "pthreads installed"
 ###
 
 # boost
@@ -215,6 +234,7 @@ echo "berkley-db installed"
 
 #########
 
+exit 0 # REMOVE IT 
 # clone project
 cd $project_path
 bqt_url="https://github.com/laanwj/bitcoin-qt.git"
