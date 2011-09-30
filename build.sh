@@ -164,7 +164,7 @@ exit 0 # REMOVE IT
 # build project dependencies
 
 # openssl
-
+echo "Installing openssl"
 ssl_ver='1.0.0a'
 ssl_arc="openssl-$ssl_ver.tar.gz"
 ssl_url="http://www.openssl.org/source/$ssl_arc"
@@ -174,9 +174,10 @@ get_archive $ssl_url $ssl_arc $ssl_md5
 ssl_build_dir="openssl-$ssl_ver"
 tar xzf $ssl_arc
 cd $ssl_build_dir
-echo $PWD
+./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=/tmp/3rdparty mingw64
+make && make install 
 cd -
-
+echo "openssl installed"
 ###
 
 # dbcxx
