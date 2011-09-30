@@ -1,0 +1,2 @@
+This project is set of patches and scripts to automate bitcoin-qt 
+cross-compilation using 64bit mingw (Linux -> Win64).
