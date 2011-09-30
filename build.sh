@@ -181,7 +181,24 @@ echo "openssl installed"
 ###
 
 # dbcxx
-
+echo "Installing berkley-db"
+db_ver='5.2.36'
+db_arc="db-$db_ver.tar.gz"
+db_url="http://download.oracle.com/berkeley-db/$db_arc"
+db_md5='88466dd6c13d5d8cddb406be8a1d4d92'
+echo "Downloading berkley-db package"
+get_archive $db_url $db_arc $db_md5
+db_build_dir="db-$db_ver"
+tar xzf $db_arc
+cd $db_build_dir/build_unix
+../dist/configure --prefix=${DEP_PATH}/dbcxx --enable-mingw --enable-cxx \
+	--disable-shared  --host=x86_64-w64-mingw32 LIBCSO_LIBS=-lwsock32 LIBXSO_LIBS=-lwsock32
+sed -i -e "/POSTLINK.*--mode=execute/d" ./Makefile # we can't execute anything
+sed -i -e "s/\$(UTIL_PROGS)$//" Makefile # we do not need to build utils
+sed -i -e "s/install_utilities//g" Makefile # we do not need to intall utils
+make && make install 
+cd -
+echo "berkley-db installed"
 ###
 
 # pthread
