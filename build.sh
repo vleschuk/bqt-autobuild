@@ -174,7 +174,7 @@ get_archive $ssl_url $ssl_arc $ssl_md5
 ssl_build_dir="openssl-$ssl_ver"
 tar xzf $ssl_arc
 cd $ssl_build_dir
-./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=/tmp/3rdparty mingw64
+./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$DEP_PATH/openssl mingw64
 make && make install 
 cd -
 echo "openssl installed"
