@@ -55,7 +55,7 @@ ln -s $COMPILER_PATH/$CROSS_HOST/include/winioctl.h $COMPILER_PATH/$CROSS_HOST/i
 echo "Done"
 cd -
 export PATH=$COMPILER_PATH/bin:$PATH
-CXX=x86_64-w64-mingw32-g++
+CXX={$CROSS_TRIPLET}g++
 
 echo "Installed cross-compiler"
 $CXX --version
@@ -220,12 +220,39 @@ export PTW32_INCLUDE PTW32_LIB # for future use when building boost
 cp pthreads/*.h $PTW32_INCLUDE
 cp pthreads/*.dll $PTW32_LIB
 cp pthreads/*.a $PTW32_LIB
+ln -s $PTW32_LIB/libpthreadGC2-w64.a $PTW32_LIB/libpthreadGC2.a
+ln -s $PTW32_LIB/pthreadGC2-w64.dll $PTW32_LIB/pthreadGC2.dll
 cd -
 echo "pthreads installed"
 ###
 
 # boost
-
+echo "Installing boost"
+boost_ver='1.47.0'
+boost_ver_='1_47_0' # TODO Generate underscored version automatically
+boost_arc="boost_$boost_ver_.tar.bz2"
+boost_url="http://downloads.sourceforge.net/project/boost/boost/$boost_ver/$boost_arc"
+boost_md5='a2dc343f7bc7f83f8941e47ed4a18200'
+echo "Downloading boost package"
+get_archive $boost_url $boost_arc $boost_md5
+boost_build_dir="boost_$boost_ver_"
+tar xjf $boost_arc
+cd $boost_build_dir
+PTW32_INCLUDE=$DEP_PATH/pthreads/include
+PTW32_LIB=$DEP_PATH/pthreads/lib
+export PTW32_INCLUDE PTW32_LIB # for future use when building boost
+echo $PWD
+sh bootstrap.sh --with-libraries=system,filesystem,program_options,thread \
+	--prefix=$DEP_PATH/boost
+echo "using gcc : mingw  : $CXX ;" > tools/build/v2/user-config.jam
+./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
+	variant=release link=static --layout=tagged --with-system --with-filesystem \
+	--with-program_options install
+# Building dynamic threads library because of boost bug https://svn.boost.org/trac/boost/ticket/5964
+./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
+	variant=release link=shared --layout=tagged --with-thread install
+cd -
+echo "boost installed"
 ###
 
 # qt
