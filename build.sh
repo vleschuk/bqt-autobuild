@@ -209,7 +209,7 @@ pthreads_md5='de47dabb5d8af7105bb4396c9ef38305'
 echo "Downloading pthreads package"
 get_archive $pthreads_url $pthreads_arc $pthreads_md5
 pthreads_build_dir="pthreads-$pthreads_ver"
-unzip $pthreads_arc
+unzip -o $pthreads_arc
 cd $pthreads_build_dir/source
 sed -i -e "s/CROSS_PATH=.*/CROSS_PATH=$COMPILER_PATH/" build_w64.sh
 sh build_w64.sh
