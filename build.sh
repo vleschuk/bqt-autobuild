@@ -256,7 +256,228 @@ echo "boost installed"
 ###
 
 # qt
+echo "installing Qt"
+qt_ver='4.7.4'
+qt_arc="qt-everywhere-opensource-src-$qt_ver.tar.gz"
+qt_url="http://get.qt.nokia.com/qt/source/$qt_arc"
+qt_md5='ddf7d83f912cf1283aa066368464fa22'
+echo "Downloading qt package"
+get_archive $qt_url $qt_arc $qt_md5
+qt_src_dir="qt-everywhere-opensource-src-$qt_ver"
+tar xzf $qt_arc
+qt_common_opts="-confirm-license -opensource -fast -no-qt3support -static -little-endian 
+	-no-3dnow -no-sse3 -no-ssse3 -no-sse4.1 -no-sse4.2 
+	-no-phonon -no-fontconfig -no-xmlpatterns -no-svg -no-webkit -no-javascript-jit -no-script
+	-no-scripttools -no-multimedia"
 
+qt_prefix="$DEP_PATH/qt"
+qt_builddir="build-qt-$qt_ver"
+
+configure="../$qt_src_dir/configure"
+
+exit_trap() {
+	sed -i '' -e 's/^QMAKE_.*macosx/!isEmpty(MAKEFILE_GENERATOR):mac:&/' $qt_builddir/.qmake.cache
+
+	trap - EXIT
+}
+
+trap exit_trap EXIT
+
+# phonon-backend does not build due to missing incomplete w32api (dsound, ddraw)
+platform=(\
+	-arch "x86_64" \
+	-arch windows \
+	-xplatform win64-g++-cross \
+	\
+	-release \
+	\
+	-no-phonon-backend \
+	\
+	-nomake tools \
+	-nomake examples \
+	-nomake demos \
+	-nomake docs \
+	-nomake translations
+	)
+
+if [ ! -e "$qt_src_dir/patch-win32-stamp" ]
+then
+	specsdir="$qt_src_dir/mkspecs/win64-g++-cross"
+
+	mkdir -p "$specsdir"
+	ln -s "../win32-g++/qplatformdefs.h" "$specsdir"
+	cat >"$specsdir/qmake.conf" <<EOF
+include(../win32-g++/qmake.conf)
+QMAKE_DIR_SEP		= /
+
+QMAKE_IDL		=
+QMAKE_CC		= ${CROSS_TRIPLET}gcc
+QMAKE_CXX		= ${CROSS_TRIPLET}g++
+QMAKE_LIB		= ${CROSS_TRIPLET}ar
+QMAKE_LINK_C		= ${CROSS_TRIPLET}gcc
+QMAKE_LINK		= ${CROSS_TRIPLET}g++
+QMAKE_RANLIB		= ${CROSS_TRIPLET}ranlib
+QMAKE_RC		= ${CROSS_TRIPLET}windres
+QMAKE_STRIP		= ${CROSS_TRIPLET}strip
+
+QMAKE_COPY		= cp -f
+QMAKE_COPY_FILE		= \$\$QMAKE_COPY
+QMAKE_COPY_DIR		= \$\$QMAKE_COPY -R
+QMAKE_MOVE		= mv -f
+QMAKE_DEL_FILE		= rm -f
+QMAKE_MKDIR		= mkdir -p
+QMAKE_DEL_DIR		= rmdir
+QMAKE_CHK_DIR_EXISTS	= test -d
+
+QMAKE_MOC		= \$\$[QT_INSTALL_BINS]\$\${DIR_SEPARATOR}moc
+QMAKE_UIC		= \$\$[QT_INSTALL_BINS]\$\${DIR_SEPARATOR}uic
+QMAKE_IDC		= \$\$[QT_INSTALL_BINS]\$\${DIR_SEPARATOR}idc
+EOF
+
+	pushd "$qt_src_dir" >/dev/null
+	patch -p0 <<"PATCH"
+--- projects.pro.old	2011-02-27 18:16:19.000000000 +0100
++++ projects.pro	2011-02-27 18:24:28.000000000 +0100
+@@ -150,7 +150,7 @@
+ 
+ #qmake
+ qmake.path=$$[QT_INSTALL_BINS]
+-win32 {
++contains(QMAKE_HOST.os, "Windows") {
+    qmake.files=$$QT_BUILD_TREE/bin/qmake.exe
+ } else {
+    qmake.files=$$QT_BUILD_TREE/bin/qmake
+--- src/3rdparty/zlib_dependency.pri.old	2010-11-06 02:55:23.000000000 +0100
++++ src/3rdparty/zlib_dependency.pri	2011-01-28 14:30:39.000000000 +0100
+@@ -5,4 +5,19 @@
+     else:                    LIBS += zdll.lib
+ } else {
+     INCLUDEPATH +=  $$PWD/zlib
++    zlib_sources += \
++        adler32.c \
++        compress.c \
++        crc32.c \
++        deflate.c \
++        gzio.c \
++        infback.c \
++        inffast.c \
++        inflate.c \
++        inftrees.c \
++        trees.c \
++        uncompr.c \
++        zutil.c
++
++    SOURCES *= $$join(zlib_sources, " $$PWD/zlib/", "$$PWD/zlib/")
+ }
+--- src/corelib/codecs/codecs.pri.old	2010-11-06 02:55:18.000000000 +0100
++++ src/corelib/codecs/codecs.pri	2011-01-28 14:47:21.000000000 +0100
+@@ -21,39 +21,39 @@
+ 
+ unix {
+ 	SOURCES += codecs/qfontlaocodec.cpp
++}
+ 
+-        contains(QT_CONFIG,iconv) {
+-                HEADERS += codecs/qiconvcodec_p.h
+-                SOURCES += codecs/qiconvcodec.cpp
+-        } else:contains(QT_CONFIG,gnu-libiconv) {
+-                HEADERS += codecs/qiconvcodec_p.h
+-                SOURCES += codecs/qiconvcodec.cpp
++contains(QT_CONFIG,iconv) {
++        HEADERS += codecs/qiconvcodec_p.h
++        SOURCES += codecs/qiconvcodec.cpp
++} else:contains(QT_CONFIG,gnu-libiconv) {
++        HEADERS += codecs/qiconvcodec_p.h
++        SOURCES += codecs/qiconvcodec.cpp
+ 
+-                DEFINES += GNU_LIBICONV
+-                !mac:LIBS_PRIVATE *= -liconv
+-        } else:contains(QT_CONFIG,sun-libiconv) {
+-                HEADERS += codecs/qiconvcodec_p.h
+-                SOURCES += codecs/qiconvcodec.cpp
+-                DEFINES += GNU_LIBICONV
+-        } else:!symbian {
+-                # no iconv, so we put all plugins in the library
+-                HEADERS += \
+-                        ../plugins/codecs/cn/qgb18030codec.h \
+-                        ../plugins/codecs/jp/qeucjpcodec.h \
+-                        ../plugins/codecs/jp/qjiscodec.h \
+-                        ../plugins/codecs/jp/qsjiscodec.h \ 
+-                        ../plugins/codecs/kr/qeuckrcodec.h \
+-                        ../plugins/codecs/tw/qbig5codec.h \
+-                        ../plugins/codecs/jp/qfontjpcodec.h
+-                SOURCES += \
+-                        ../plugins/codecs/cn/qgb18030codec.cpp \
+-                        ../plugins/codecs/jp/qjpunicode.cpp \
+-                        ../plugins/codecs/jp/qeucjpcodec.cpp \
+-                        ../plugins/codecs/jp/qjiscodec.cpp \
+-                        ../plugins/codecs/jp/qsjiscodec.cpp \ 
+-                        ../plugins/codecs/kr/qeuckrcodec.cpp \
+-                        ../plugins/codecs/tw/qbig5codec.cpp \
+-                        ../plugins/codecs/jp/qfontjpcodec.cpp
+-        }
++        DEFINES += GNU_LIBICONV
++        !mac:LIBS_PRIVATE *= -liconv
++} else:contains(QT_CONFIG,sun-libiconv) {
++        HEADERS += codecs/qiconvcodec_p.h
++        SOURCES += codecs/qiconvcodec.cpp
++        DEFINES += GNU_LIBICONV
++} else:!symbian {
++        # no iconv, so we put all plugins in the library
++        HEADERS += \
++                ../plugins/codecs/cn/qgb18030codec.h \
++                ../plugins/codecs/jp/qeucjpcodec.h \
++                ../plugins/codecs/jp/qjiscodec.h \
++                ../plugins/codecs/jp/qsjiscodec.h \ 
++                ../plugins/codecs/kr/qeuckrcodec.h \
++                ../plugins/codecs/tw/qbig5codec.h \
++                ../plugins/codecs/jp/qfontjpcodec.h
++        SOURCES += \
++                ../plugins/codecs/cn/qgb18030codec.cpp \
++                ../plugins/codecs/jp/qjpunicode.cpp \
++                ../plugins/codecs/jp/qeucjpcodec.cpp \
++                ../plugins/codecs/jp/qjiscodec.cpp \
++                ../plugins/codecs/jp/qsjiscodec.cpp \ 
++                ../plugins/codecs/kr/qeuckrcodec.cpp \
++                ../plugins/codecs/tw/qbig5codec.cpp \
++                ../plugins/codecs/jp/qfontjpcodec.cpp
+ }
+ symbian:LIBS += -lcharconv
+PATCH
+	touch patch-win32-stamp
+	popd >/dev/null
+fi
+
+if  [ ! -d "$qt_builddir" ]; then
+	mkdir "$qt_builddir"
+fi
+export PATH="$PATH:$(pwd)/$qt_builddir/bin"
+
+cd $qt_builddir
+"$configure" $qt_common_opts "${platform[@]}" -prefix $qt_prefix "$@"
+patch -p0 << "PATCH"
+--- Makefile	2011-10-05 11:29:08.372972889 +0400
++++ Makefile.new	2011-10-05 11:32:51.581763664 +0400
+@@ -31,14 +31,7 @@
+ 		sub-uic \
+ 		sub-winmain \
+ 		sub-corelib \
+-		sub-xml \
+-		sub-network \
+-		sub-sql \
+-		sub-testlib \
+-		sub-gui \
+-		sub-activeqt \
+-		sub-opengl \
+-		sub-plugins
++		sub-gui 
+ 
+ src/tools/bootstrap/$(MAKEFILE): 
+ 	@$(CHK_DIR_EXISTS) src/tools/bootstrap/ || $(MKDIR) src/tools/bootstrap/ 
+PATCH
+make -j2 && make install
+cd -
+echo "Qt installed"
 ###
 
 #########
