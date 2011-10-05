@@ -173,8 +173,12 @@ get_archive $ssl_url $ssl_arc $ssl_md5
 ssl_build_dir="openssl-$ssl_ver"
 tar xzf $ssl_arc
 cd $ssl_build_dir
-./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$DEP_PATH/openssl mingw64
+ssl_prefix="$DEP_PATH/openssl"
+./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
 make && make install 
+OPENSSL_INCLUDE_PATH=$ssl_prefix/include
+OPENSSL_LIB_PATH=$ssl_prefix/lib
+export OPENSSL_INCLUDE_PATH OPENSSL_LIB_PATH
 cd -
 echo "openssl installed"
 ###
@@ -190,12 +194,16 @@ get_archive $db_url $db_arc $db_md5
 db_build_dir="db-$db_ver"
 tar xzf $db_arc
 cd $db_build_dir/build_unix
-../dist/configure --prefix=${DEP_PATH}/dbcxx --enable-mingw --enable-cxx \
+db_prefix="$DEP_PATH/db"
+../dist/configure --prefix=$db_prefix --enable-mingw --enable-cxx \
 	--disable-shared  --host=x86_64-w64-mingw32 LIBCSO_LIBS=-lwsock32 LIBXSO_LIBS=-lwsock32
 sed -i -e "/POSTLINK.*--mode=execute/d" ./Makefile # we can't execute anything
 sed -i -e "s/\$(UTIL_PROGS)$//" Makefile # we do not need to build utils
 sed -i -e "s/install_utilities//g" Makefile # we do not need to intall utils
 make && make install 
+BDB_INCLUDE_PATH=$db_prefix/include
+BDB_LIB_PATH=$db_prefix/lib
+export BDB_INCLUDE_PATH BDB_LIB_PATH
 cd -
 echo "berkley-db installed"
 ###
@@ -238,19 +246,19 @@ get_archive $boost_url $boost_arc $boost_md5
 boost_build_dir="boost_$boost_ver_"
 tar xjf $boost_arc
 cd $boost_build_dir
-PTW32_INCLUDE=$DEP_PATH/pthreads/include
-PTW32_LIB=$DEP_PATH/pthreads/lib
-export PTW32_INCLUDE PTW32_LIB # for future use when building boost
-echo $PWD
+boost_prefix=$DEP_PATH/boost
 sh bootstrap.sh --with-libraries=system,filesystem,program_options,thread \
-	--prefix=$DEP_PATH/boost
+	--prefix=$boost_prefix
 echo "using gcc : mingw  : $CXX ;" > tools/build/v2/user-config.jam
 ./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
 	variant=release link=static --layout=tagged --with-system --with-filesystem \
-	--with-program_options install
+	--with-program_options install --prefix=$boost_prefix
 # Building dynamic threads library because of boost bug https://svn.boost.org/trac/boost/ticket/5964
 ./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
-	variant=release link=shared --layout=tagged --with-thread install
+	variant=release link=shared --layout=tagged --with-thread install --prefix=$boost_prefix
+BOOST_INCLUDE_PATH=$boost_prefix/include
+BOOST_LIB_PATH=$boost_prefix/lib
+export BOOST_INCLUDE_PATH BOOST_LIB_PATH
 cd -
 echo "boost installed"
 ###
@@ -274,14 +282,6 @@ qt_prefix="$DEP_PATH/qt"
 qt_builddir="build-qt-$qt_ver"
 
 configure="../$qt_src_dir/configure"
-
-exit_trap() {
-	sed -i '' -e 's/^QMAKE_.*macosx/!isEmpty(MAKEFILE_GENERATOR):mac:&/' $qt_builddir/.qmake.cache
-
-	trap - EXIT
-}
-
-trap exit_trap EXIT
 
 # phonon-backend does not build due to missing incomplete w32api (dsound, ddraw)
 platform=(\
@@ -313,7 +313,7 @@ QMAKE_DIR_SEP		= /
 QMAKE_IDL		=
 QMAKE_CC		= ${CROSS_TRIPLET}gcc
 QMAKE_CXX		= ${CROSS_TRIPLET}g++
-QMAKE_LIB		= ${CROSS_TRIPLET}ar
+QMAKE_LIB		= ${CROSS_TRIPLET}ar -ru
 QMAKE_LINK_C		= ${CROSS_TRIPLET}gcc
 QMAKE_LINK		= ${CROSS_TRIPLET}g++
 QMAKE_RANLIB		= ${CROSS_TRIPLET}ranlib
@@ -455,27 +455,25 @@ export PATH="$PATH:$(pwd)/$qt_builddir/bin"
 
 cd $qt_builddir
 "$configure" $qt_common_opts "${platform[@]}" -prefix $qt_prefix "$@"
-patch -p0 << "PATCH"
---- Makefile	2011-10-05 11:29:08.372972889 +0400
-+++ Makefile.new	2011-10-05 11:32:51.581763664 +0400
-@@ -31,14 +31,7 @@
- 		sub-uic \
- 		sub-winmain \
- 		sub-corelib \
--		sub-xml \
--		sub-network \
--		sub-sql \
--		sub-testlib \
--		sub-gui \
--		sub-activeqt \
--		sub-opengl \
--		sub-plugins
-+		sub-gui 
- 
- src/tools/bootstrap/$(MAKEFILE): 
- 	@$(CHK_DIR_EXISTS) src/tools/bootstrap/ || $(MKDIR) src/tools/bootstrap/ 
-PATCH
 make -j2 && make install
+# ############### #
+# BLOODY HACK
+# ############### #
+# The build should fail for the first time
+# due to incorrect build of freetype
+# so we just build it manually and place to right location
+mkdir .freetype_build
+cd $_
+../../$qt_src_dir/src/3rdparty/freetype/configure --host=${CROSS_HOST}
+make
+cp *.o ../src/gui/.obj/release-static
+cd - 
+# ok, now continue build
+make -j2 && make install
+# ############### #
+# /BLOODY HACK
+# ############### #
+
 cd -
 echo "Qt installed"
 ###
