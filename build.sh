@@ -479,7 +479,7 @@ fi
 export PATH="$PATH:$(pwd)/$qt_builddir/bin"
 
 cd $qt_builddir
-"$configure" $qt_common_opts "${platform[@]}" -prefix $qt_prefix "$@"
+"$configure" $qt_common_opts "${platform[@]}" -prefix $qt_prefix
 
 # enable RTTI 
 rm -f mkspecs/features/win32/rtti_off.prf
