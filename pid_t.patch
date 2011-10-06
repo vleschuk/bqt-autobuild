@@ -1,0 +1,24 @@
+diff -uNr src.orig/util.cpp src/util.cpp
+--- src.orig/util.cpp	2011-10-06 12:32:18.092490198 +0400
++++ src/util.cpp	2011-10-06 13:32:24.882950535 +0400
+@@ -853,7 +853,7 @@
+     return pathConfig.string();
+ }
+ 
+-void CreatePidFile(string pidFile, pid_t pid)
++void CreatePidFile(string pidFile, unsigned long pid)
+ {
+     FILE* file = fopen(pidFile.c_str(), "w");
+     if (file)
+diff -uNr src.orig/util.h src/util.h
+--- src.orig/util.h	2011-10-06 12:32:18.045822823 +0400
++++ src/util.h	2011-10-06 13:34:45.918853147 +0400
+@@ -190,7 +190,7 @@
+ void GetDataDir(char* pszDirRet);
+ std::string GetConfigFile();
+ std::string GetPidFile();
+-void CreatePidFile(std::string pidFile, pid_t pid);
++void CreatePidFile(std::string pidFile, unsigned long pid);
+ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet, std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet);
+ #ifdef __WXMSW__
+ std::string MyGetSpecialFolderPath(int nFolder, bool fCreate);
