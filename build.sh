@@ -181,29 +181,6 @@ msg "All additional libs were installed into toolchain"
 
 # build project dependencies
 
-# openssl
-msg "Installing openssl"
-ssl_ver='1.0.0a'
-ssl_arc="openssl-$ssl_ver.tar.gz"
-ssl_url="http://www.openssl.org/source/$ssl_arc"
-ssl_md5='e3873edfffc783624cfbdb65e2249cbd'
-msg "Downloading openssl package"
-get_archive $ssl_url $ssl_arc $ssl_md5
-ssl_build_dir="openssl-$ssl_ver"
-tar xzf $ssl_arc
-cd $ssl_build_dir
-ssl_prefix="$DEP_PATH/openssl"
-./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
-make -j2
-make install
-OPENSSL_INCLUDE=$ssl_prefix/include
-OPENSSL_LIB=$ssl_prefix/lib
-OPENSSL_VAR="\"OPENSSL_INCLUDE_PATH=${OPENSSL_INCLUDE}\" \"OPENSSL_LIB_PATH=${OPENSSL_LIB}\" "
-BQT_VARS=${BQT_VARS}${OPENSSL_VAR}
-cd -
-msg "openssl installed"
-###
-
 # dbcxx
 msg "Installing berkley-db"
 db_ver='5.2.36'
@@ -286,6 +263,29 @@ BOOST_VAR="\"BOOST_LIB_SUFFIX=-mt\" \"BOOST_INCLUDE_PATH=${BOOST_INCLUDE}\" \"BO
 BQT_VARS=${BQT_VARS}${BOOST_VAR}
 cd -
 msg "boost installed"
+###
+
+# openssl
+msg "Installing openssl"
+ssl_ver='1.0.0a'
+ssl_arc="openssl-$ssl_ver.tar.gz"
+ssl_url="http://www.openssl.org/source/$ssl_arc"
+ssl_md5='e3873edfffc783624cfbdb65e2249cbd'
+msg "Downloading openssl package"
+get_archive $ssl_url $ssl_arc $ssl_md5
+ssl_build_dir="openssl-$ssl_ver"
+tar xzf $ssl_arc
+cd $ssl_build_dir
+ssl_prefix="$DEP_PATH/openssl"
+./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
+make -j2
+make install
+OPENSSL_INCLUDE=$ssl_prefix/include
+OPENSSL_LIB=$ssl_prefix/lib
+OPENSSL_VAR="\"OPENSSL_INCLUDE_PATH=${OPENSSL_INCLUDE}\" \"OPENSSL_LIB_PATH=${OPENSSL_LIB}\" "
+BQT_VARS=${BQT_VARS}${OPENSSL_VAR}
+cd -
+msg "openssl installed"
 ###
 
 # qt
