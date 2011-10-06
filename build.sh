@@ -523,7 +523,8 @@ msg "Qt installed"
 cd $project_path
 bqt_url="https://github.com/bitcoin/bitcoin.git"
 msg "Cloning project to $project_path"
-git clone $bqt_url bitcoin
+git clone $bqt_url $project_path/bitcoin
+cd $project_path/bitcoin
 BQT_REV=`git show|head -1|cut -d ' ' -f2`
 msg "Project cloned from $bqt_url. Revision $BQT_REV"
 #########
