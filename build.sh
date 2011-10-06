@@ -519,7 +519,6 @@ msg "Qt installed"
 
 #########
 
-restore_output ;  exit 0 # REMOVE IT 
 # clone project
 cd $project_path
 bqt_url="https://github.com/bitcoin/bitcoin.git"
