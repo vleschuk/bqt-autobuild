@@ -60,13 +60,13 @@ mingw_date='20110822'
 mingw_arc="mingw-w64-1.0-bin_x86_64-linux_${mingw_date}.tar.bz2"
 mingw_url="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Automated%20Builds/${mingw_arc}"
 mingw_md5='a8f9f7648ea9847f4b691c1e032c2ce0'
-patch0="float_h.patch"
+mingw_patch0="float_h.patch"
 get_archive $mingw_url $mingw_arc $mingw_md5
 cd $COMPILER_PATH
 tar xjf $tmpdir/$mingw_arc
 
 msg "Applying changes to cross-compiler..."
-patch -p0 -f < $start_dir/$patch0 > $start_dir/patch.log
+patch -p0 -f < $start_dir/$mingw_patch0 > $start_dir/mingw_patch.log
 
 # create symbolic link to avoid case-sensitivity issue in openssl #includes 
 ln -s $COMPILER_PATH/$CROSS_HOST/include/winioctl.h $COMPILER_PATH/$CROSS_HOST/include/WinIoCtl.h
@@ -476,6 +476,10 @@ export PATH="$PATH:$(pwd)/$qt_builddir/bin"
 
 cd $qt_builddir
 "$configure" $qt_common_opts "${platform[@]}" -prefix $qt_prefix "$@"
+
+# enable RTTI 
+rm -f mkspecs/features/win32/rtti_off.prf
+
 make -j2 && make install
 # ############### #
 # BLOODY HACK
@@ -495,6 +499,12 @@ make -j2 && make install
 # /BLOODY HACK
 # ############### #
 
+# build lrelease manually
+
+cd tools/linguist/lrelease/
+make && make install
+LRELEASE=lrelease # qt bin path is already in PATH so that's enough
+
 cd -
 msg "Qt installed"
 ###
@@ -504,13 +514,21 @@ msg "Qt installed"
 restore_output ;  exit 0 # REMOVE IT 
 # clone project
 cd $project_path
-bqt_url="https://github.com/laanwj/bitcoin-qt.git"
-msg "Cloning project to project_path"
-git clone $bqt_url bitcoin-qt
+bqt_url="https://github.com/bitcoin/bitcoin.git"
+msg "Cloning project to $project_path"
+git clone $bqt_url bitcoin
 msg "Project cloned from $bqt_url"
 #########
 
 # build project
+QMAKE_LRELEASE=$LRELEASE
+export QMAKE_LRELEASE
+bqt_patch0='dword_ptr.patch'
+bqt_patch1='win32_ie_define.patch'
+msg "Patching project"
+>$start_dir/bqt_patch.log
+patch -p0 -f < $start_dir/$bqt_patch0 >> $start_dir/bqt_patch.log
+patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
 
 #########
 restore_output
