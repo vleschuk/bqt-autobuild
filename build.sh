@@ -96,8 +96,7 @@ cd "zlib-$zlib_ver"
 msg $PWD
 CROSS_PREFIX=$CROSS_TRIPLET ./configure --prefix $COMPILER_PATH/$CROSS_HOST --64 --static 
 sed -i -e "/cp\ \$(SHAREDLIBV)/d" Makefile
-make
-make install
+make -j2 && make install
 cd -
 msg "zlib installed"
 ###
@@ -115,7 +114,7 @@ cd "bzip2-$bzlib_ver"
 msg $PWD
 make CC=${CROSS_TRIPLET}gcc AR=${CROSS_TRIPLET}ar RANLIB=${CROSS_TRIPLET}ranlib \
    "CFLAGS=-Wall -Winline -O2 -D_FILE_OFFSET_BITS=64" \
-   libbz2.a -B
+   libbz2.a -B -j2
  
 install -m 644 libbz2.a $COMPILER_PATH/$CROSS_HOST/lib/
 install -m 644 bzlib.h $COMPILER_PATH/$CROSS_HOST/include/
@@ -136,7 +135,7 @@ tar xzf $expat_arc
 cd "expat-$expat_ver"
 msg $PWD
 ./configure --prefix=${COMPILER_PATH}/${CROSS_HOST} --host=${CROSS_HOST}
-make && make install
+make -j2 && make install
 cd -
 msg "expat installed"
 ###
@@ -152,7 +151,7 @@ tar xzf $freetype_arc
 cd "freetype-$freetype_ver"
 msg $PWD
 ./configure --prefix=${COMPILER_PATH}/${CROSS_HOST} --host=${CROSS_HOST} --enable-static --disable-shared
-make && make install
+make -j2 && make install
 cd -
 C_FREETYPE_INCLUDE=${COMPILER_PATH}/${CROSS_HOST}/include/freetype2
 msg "freetype installed"
@@ -171,7 +170,7 @@ msg $PWD
 ./configure --prefix=${COMPILER_PATH}/${CROSS_HOST} --host=${CROSS_HOST} --enable-static --disable-shared \
 	--with-freetype-config=${COMPILER_PATH}/bin/freetype-config --with-arch=x86_64 CFLAGS="-I${C_FREETYPE_INCLUDE}" LDFLAGS="-lfreetype"
 sed -i -e "/\$(INSTALL)\ .libs\/libfontconfig.dll.a/d" src/Makefile # we are not trying to install shared lib
-make && make install
+make -j2 && make install
 cd -
 msg "fontconfig installed"
 ###
@@ -195,7 +194,8 @@ tar xzf $ssl_arc
 cd $ssl_build_dir
 ssl_prefix="$DEP_PATH/openssl"
 ./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
-make && make install 
+make -j2
+make install
 OPENSSL_INCLUDE=$ssl_prefix/include
 OPENSSL_LIB=$ssl_prefix/lib
 OPENSSL_VAR="\"OPENSSL_INCLUDE_PATH=${OPENSSL_INCLUDE}\" \"OPENSSL_LIB_PATH=${OPENSSL_LIB}\" "
@@ -221,7 +221,7 @@ db_prefix="$DEP_PATH/db"
 sed -i -e "/POSTLINK.*--mode=execute/d" ./Makefile # we can't execute anything
 sed -i -e "s/\$(UTIL_PROGS)$//" Makefile # we do not need to build utils
 sed -i -e "s/install_utilities//g" Makefile # we do not need to intall utils
-make && make install 
+make -j2 && make install 
 BDB_INCLUDE=$db_prefix/include
 BDB_LIB=$db_prefix/lib
 BDB_VAR="\"BDB_INCLUDE_PATH=${BDB_INCLUDE}\" \"BDB_LIB_PATH=${BDB_LIB}\" "
@@ -509,10 +509,10 @@ rm -f $qt_prefix/mkspecs/features/win32/rtti_off.prf
 # build lrelease manually
 
 cd tools/linguist/lrelease/
-make && make install
+make -j2 && make install
 LRELEASE_VAR="\"QMAKE_LRELEASE=lrelease\" " # qt bin path is already in PATH so that's enough
 BQT_VARS=${BQT_VARS}${LRELEASE_VAR}
-
+export PATH=${qt_prefix}/bin:$PATH
 cd -
 msg "Qt installed"
 ###
@@ -520,11 +520,11 @@ msg "Qt installed"
 #########
 
 # clone project
-cd $project_path
+cd $PROJECT_PATH
 bqt_url="https://github.com/bitcoin/bitcoin.git"
-msg "Cloning project to $project_path"
-git clone $bqt_url $project_path/bitcoin
-cd $project_path/bitcoin
+msg "Cloning project to $PROJECT_PATH"
+#git clone $bqt_url $PROJECT_PATH/bitcoin
+cd $PROJECT_PATH/bitcoin
 BQT_REV=`git show|head -1|cut -d ' ' -f2`
 msg "Project cloned from $bqt_url. Revision $BQT_REV"
 #########
@@ -541,14 +541,15 @@ patch -p0 -f < $start_dir/$bqt_patch2 >> $start_dir/bqt_patch.log
 mkdir build
 cd $_
 qmake -spec win64-g++-cross ../bitcoin-qt.pro $BQT_VARS
-sed -i -e "s/zdll\.lib/-lz/g"
+sed -i -e "s/zdll\.lib/-lz/g" Makefile.Release
+mkdir release
 make -j2
-cp $BOOST_LIB/libboost_thread-mt.dll release
-cp $PTW32_LIB/pthreadGC2-w64.dll release
-cp $COMPILER_PATH/bin/libstdc++-6.dll release
+cp $BOOST_LIB/libboost_thread-mt.dll release/
+cp $PTW32_LIB/pthreadGC2-w64.dll release/
+cp $COMPILER_PATH/bin/libstdc++-6.dll release/
 bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
 zip -r $bqt_pkg release
-msg "Project build. Archive $bqt_pkg"
+msg "Project built. Archive $bqt_pkg"
 cd -
 #########
 restore_output
