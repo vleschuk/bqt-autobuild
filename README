@@ -1,2 +1,19 @@
 This project is set of patches and scripts to automate bitcoin-qt 
 cross-compilation using 64bit mingw (Linux -> Win64).
+
+The following tools must be present in the system to use build.sh:
+
+ - GCC with C++ support ( to build native tools like qmake, lrelease, etc )
+ - patch
+ - git ( to clone remote repository )
+ - zip/unzip
+
+Usage:
+	./build.sh [PATH] 
+  If PATH parameter is absent the project will be built in current directory.
+  Otherwise PATH will be used. IMPORTANT: PATH must be full, not relative.
+
+  In case of successful build resulting archive will be placed to start directory,
+  in case of fail more information can be found in log.txt where all build process is logged.
+
+
