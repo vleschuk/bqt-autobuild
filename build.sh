@@ -530,14 +530,12 @@ msg "Project cloned from $bqt_url. Revision $BQT_REV"
 #########
 
 # build project
-bqt_patch0='dword_ptr.patch'
-bqt_patch1='win32_ie_define.patch'
-bqt_patch2='pid_t.patch'
+bqt_patch0='win32_ie_define.patch'
+bqt_patch1='pid_t.patch'
 msg "Patching project"
 >$start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch0 >> $start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
-patch -p0 -f < $start_dir/$bqt_patch2 >> $start_dir/bqt_patch.log
 mkdir build
 cd $_
 qmake -spec win64-g++-cross ../bitcoin-qt.pro $BQT_VARS
