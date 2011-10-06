@@ -10,6 +10,7 @@ fi
 DEP_PATH=$PROJECT_PATH/3rdparty
 mkdir -p $DEP_PATH
 
+BQT_VARS=''
 BUILD_LOG=$start_dir/log.txt
 
 function output2log {
@@ -195,9 +196,10 @@ cd $ssl_build_dir
 ssl_prefix="$DEP_PATH/openssl"
 ./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
 make && make install 
-OPENSSL_INCLUDE_PATH=$ssl_prefix/include
-OPENSSL_LIB_PATH=$ssl_prefix/lib
-export OPENSSL_INCLUDE_PATH OPENSSL_LIB_PATH
+OPENSSL_INCLUDE=$ssl_prefix/include
+OPENSSL_LIB=$ssl_prefix/lib
+OPENSSL_VAR="\"OPENSSL_INCLUDE_PATH=${OPENSSL_INCLUDE}\" \"OPENSSL_LIB_PATH=${OPENSSL_LIB}\" "
+BQT_VARS=${BQT_VARS}${OPENSSL_VAR}
 cd -
 msg "openssl installed"
 ###
@@ -220,9 +222,10 @@ sed -i -e "/POSTLINK.*--mode=execute/d" ./Makefile # we can't execute anything
 sed -i -e "s/\$(UTIL_PROGS)$//" Makefile # we do not need to build utils
 sed -i -e "s/install_utilities//g" Makefile # we do not need to intall utils
 make && make install 
-BDB_INCLUDE_PATH=$db_prefix/include
-BDB_LIB_PATH=$db_prefix/lib
-export BDB_INCLUDE_PATH BDB_LIB_PATH
+BDB_INCLUDE=$db_prefix/include
+BDB_LIB=$db_prefix/lib
+BDB_VAR="\"BDB_INCLUDE_PATH=${BDB_INCLUDE}\" \"BDB_LIB_PATH=${BDB_LIB}\" "
+BQT_VARS=${BQT_VARS}${BDB_VAR}
 cd -
 msg "berkley-db installed"
 ###
@@ -277,9 +280,10 @@ END
 # Building dynamic threads library because of boost bug https://svn.boost.org/trac/boost/ticket/5964
 ./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
 	variant=release link=shared --layout=tagged --with-thread install --prefix=$boost_prefix
-BOOST_INCLUDE_PATH=$boost_prefix/include
-BOOST_LIB_PATH=$boost_prefix/lib
-export BOOST_INCLUDE_PATH BOOST_LIB_PATH
+BOOST_INCLUDE=$boost_prefix/include
+BOOST_LIB=$boost_prefix/lib
+BOOST_VAR="\"BOOST_LIB_SUFFIX=-mt\" \"BOOST_INCLUDE_PATH=${BOOST_INCLUDE}\" \"BOOST_LIB_PATH=${BOOST_LIB}\" "
+BQT_VARS=${BQT_VARS}${BOOST_VAR}
 cd -
 msg "boost installed"
 ###
@@ -499,11 +503,15 @@ make -j2 && make install
 # /BLOODY HACK
 # ############### #
 
+# enable RTTI in installed 
+rm -f $qt_prefix/mkspecs/features/win32/rtti_off.prf
+
 # build lrelease manually
 
 cd tools/linguist/lrelease/
 make && make install
-LRELEASE=lrelease # qt bin path is already in PATH so that's enough
+LRELEASE_VAR="\"QMAKE_LRELEASE=lrelease\" " # qt bin path is already in PATH so that's enough
+BQT_VARS=${BQT_VARS}${LRELEASE_VAR}
 
 cd -
 msg "Qt installed"
@@ -517,12 +525,11 @@ cd $project_path
 bqt_url="https://github.com/bitcoin/bitcoin.git"
 msg "Cloning project to $project_path"
 git clone $bqt_url bitcoin
-msg "Project cloned from $bqt_url"
+BQT_REV=`git show|head -1|cut -d ' ' -f2`
+msg "Project cloned from $bqt_url. Revision $BQT_REV"
 #########
 
 # build project
-QMAKE_LRELEASE=$LRELEASE
-export QMAKE_LRELEASE
 bqt_patch0='dword_ptr.patch'
 bqt_patch1='win32_ie_define.patch'
 bqt_patch2='pid_t.patch'
@@ -531,7 +538,18 @@ msg "Patching project"
 patch -p0 -f < $start_dir/$bqt_patch0 >> $start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch2 >> $start_dir/bqt_patch.log
-
+mkdir build
+cd $_
+qmake -spec win64-g++-cross ../bitcoin-qt.pro $BQT_VARS
+sed -i -e "s/zdll\.lib/-lz/g"
+make -j2
+cp $BOOST_LIB/libboost_thread-mt.dll release
+cp $PTW32_LIB/pthreadGC2-w64.dll release
+cp $COMPILER_PATH/bin/libstdc++-6.dll release
+bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
+zip -r $bqt_pkg release
+msg "Project build. Archive $bqt_pkg"
+cd -
 #########
 restore_output
 cd $start_dir
