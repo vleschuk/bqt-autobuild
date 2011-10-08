@@ -545,6 +545,8 @@ make -j2
 cp $BOOST_LIB/libboost_thread-mt.dll release/
 cp $PTW32_LIB/pthreadGC2-w64.dll release/
 cp $COMPILER_PATH/bin/libstdc++-6.dll release/
+cp $COMPILER_PATH/bin/libgcc_s_sjlj-1.dll release/
+cp $COMPILER_PATH/bin/libssp-0.dll release/
 bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
 zip -r $bqt_pkg release
 msg "Project built. Archive $bqt_pkg"
