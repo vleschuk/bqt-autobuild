@@ -207,32 +207,6 @@ cd -
 msg "berkley-db installed"
 ###
 
-# pthread
-msg "Installing pthreads package"
-pthreads_ver='20100604'
-pthreads_arc="pthreads-$pthreads_ver.zip"
-pthreads_url="http://freefr.dl.sourceforge.net/project/mingw-w64/External%20binary%20packages%20%28Win64%20hosted%29/pthreads/$pthreads_arc"
-pthreads_md5='de47dabb5d8af7105bb4396c9ef38305'
-msg "Downloading pthreads package"
-get_archive $pthreads_url $pthreads_arc $pthreads_md5
-pthreads_build_dir="pthreads-$pthreads_ver"
-unzip -o $pthreads_arc
-cd $pthreads_build_dir/source
-sed -i -e "s/CROSS_PATH=.*/CROSS_PATH=$COMPILER_PATH/" build_w64.sh
-sh build_w64.sh
-PTW32_INCLUDE=$DEP_PATH/pthreads/include
-PTW32_LIB=$DEP_PATH/pthreads/lib
-mkdir -p $PTW32_INCLUDE $PTW32_LIB
-export PTW32_INCLUDE PTW32_LIB # for future use when building boost
-cp pthreads/*.h $PTW32_INCLUDE
-cp pthreads/*.dll $PTW32_LIB
-cp pthreads/*.a $PTW32_LIB
-ln -s $PTW32_LIB/libpthreadGC2-w64.a $PTW32_LIB/libpthreadGC2.a
-ln -s $PTW32_LIB/pthreadGC2-w64.dll $PTW32_LIB/pthreadGC2.dll
-cd -
-msg "pthreads installed"
-###
-
 # boost
 msg "Installing boost"
 boost_ver='1.47.0'
@@ -251,12 +225,9 @@ sh bootstrap.sh --with-libraries=system,filesystem,program_options,thread \
 cat > tools/build/v2/user-config.jam << END
 using gcc : mingw  : $CXX ;
 END
-./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
+./b2 cflags="-DBOOST_THREAD_USE_LIB -static-libgcc -static-libstdc++" toolset=gcc target-os=windows threading=multi threadapi=win32 \
 	variant=release link=static --layout=tagged --with-system --with-filesystem \
-	--with-program_options install --prefix=$boost_prefix
-# Building dynamic threads library because of boost bug https://svn.boost.org/trac/boost/ticket/5964
-./b2 cflags="-static-libgcc -static-libstdc++" toolset=gcc target-os=windows threading=multi threadapi=pthread \
-	variant=release link=shared --layout=tagged --with-thread install --prefix=$boost_prefix
+	--with-program_options --with-thread install --prefix=$boost_prefix
 BOOST_INCLUDE=$boost_prefix/include
 BOOST_LIB=$boost_prefix/lib
 BOOST_VAR="\"BOOST_LIB_SUFFIX=-mt\" \"BOOST_INCLUDE_PATH=${BOOST_INCLUDE}\" \"BOOST_LIB_PATH=${BOOST_LIB}\" "
@@ -532,9 +503,11 @@ msg "Project cloned from $bqt_url. Revision $BQT_REV"
 # build project
 bqt_patch0='win32_ie_define.patch'
 bqt_patch1='pid_t.patch'
+bqt_patch2='boost_thread_win32.patch'
 msg "Patching project"
 >$start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch0 >> $start_dir/bqt_patch.log
+patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
 patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
 mkdir build
 cd $_
@@ -542,11 +515,6 @@ qmake -spec win64-g++-cross ../bitcoin-qt.pro $BQT_VARS
 sed -i -e "s/zdll\.lib/-lz/g" Makefile.Release
 mkdir release
 make -j2
-cp $BOOST_LIB/libboost_thread-mt.dll release/
-cp $PTW32_LIB/pthreadGC2-w64.dll release/
-cp $COMPILER_PATH/bin/libstdc++-6.dll release/
-cp $COMPILER_PATH/bin/libgcc_s_sjlj-1.dll release/
-cp $COMPILER_PATH/bin/libssp-0.dll release/
 bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
 zip -r $bqt_pkg release
 msg "Project built. Archive $bqt_pkg"
