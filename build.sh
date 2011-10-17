@@ -255,7 +255,7 @@ END
 	variant=release link=static --layout=tagged --with-system --with-filesystem \
 	--with-program_options install --prefix=$boost_prefix
 # Building dynamic threads library because of boost bug https://svn.boost.org/trac/boost/ticket/5964
-./b2 toolset=gcc target-os=windows threading=multi threadapi=pthread \
+./b2 cflags="-static-libgcc -static-libstdc++" toolset=gcc target-os=windows threading=multi threadapi=pthread \
 	variant=release link=shared --layout=tagged --with-thread install --prefix=$boost_prefix
 BOOST_INCLUDE=$boost_prefix/include
 BOOST_LIB=$boost_prefix/lib
