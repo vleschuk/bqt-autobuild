@@ -5,6 +5,10 @@ PROJECT_PATH=$start_dir
 if [ $1 ]
 then
 	PROJECT_PATH=$1
+	if [ `expr match "$PROJECT_PATH" '^/'` -eq 0 ]
+	then
+		PROJECT_PATH=${PWD}'/'${PROJECT_PATH}
+	fi
 	mkdir -p $PROJECT_PATH
 fi
 DEP_PATH=$PROJECT_PATH/3rdparty
