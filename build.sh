@@ -37,7 +37,6 @@ msg "Project path is $PROJECT_PATH, dependencies will be placed to $DEP_PATH"
 
 
 COMPILER_PATH=$HOME/toolchains/mingw_w64
-mkdir -p $COMPILER_PATH
 CROSS_HOST=x86_64-w64-mingw32
 CROSS_TRIPLET=${CROSS_HOST}-
 
@@ -60,7 +59,9 @@ function get_archive {
 
 # install cross-toolchain
 msg "Starting installation of cross-compiler"
-
+if [ ! -d $COMPILER_PATH ]
+then
+mkdir -p $COMPILER_PATH
 mingw_date='20110822'
 mingw_arc="mingw-w64-1.0-bin_x86_64-linux_${mingw_date}.tar.bz2"
 mingw_url="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Automated%20Builds/${mingw_arc}"
@@ -83,6 +84,9 @@ ln -s $COMPILER_PATH/$CROSS_HOST/include/winioctl.h $COMPILER_PATH/$CROSS_HOST/i
 
 msg "Done"
 cd -
+else
+	msg "Compiler seems to be already installed"
+fi
 export PATH=$COMPILER_PATH/bin:$PATH
 CXX=${CROSS_TRIPLET}g++
 
@@ -95,6 +99,8 @@ msg "Installing additional libs for cross-toolchain"
 ### install zlib to mingw
 
 msg "Installing zlib"
+if [ ! -f $COMPILER_PATH/$CROSS_HOST/lib/libz.a ]
+then
 zlib_ver='1.2.5'
 zlib_arc="zlib-$zlib_ver.tar.gz"
 zlib_url="http://www.zlib.net/$zlib_arc"
@@ -108,11 +114,16 @@ sed -i -e "/cp\ \$(SHAREDLIBV)/d" Makefile
 make -j2 && make install
 cd -
 msg "zlib installed"
+else
+	msg "zlib seems to be already installed"
+fi
 ###
 
 ### install bzlib to mingw
 
 msg "Installing bzlib"
+if [ ! -f $COMPILER_PATH/$CROSS_HOST/lib/libbz2.a ]
+then
 bzlib_ver='1.0.6'
 bzlib_arc="bzip2-$bzlib_ver.tar.gz"
 bzlib_url="http://www.bzip.org/$bzlib_ver/$bzlib_arc"
@@ -131,10 +142,15 @@ install -m 644 bzlib.h $COMPILER_PATH/$CROSS_HOST/include/
 cd -
 
 msg "bzlib installed"
+else
+	msg "bzlib seems to be already installed"
+fi
 ###
 
 ### install expat to mingw
 msg "Installing expat"
+if [ ! -f $COMPILER_PATH/$CROSS_HOST/lib/libexpat.a ]
+then
 expat_ver='2.0.1'
 expat_arc="expat-$expat_ver.tar.gz"
 expat_url="http://downloads.sourceforge.net/project/expat/expat/$expat_ver/$expat_arc"
@@ -147,10 +163,15 @@ msg $PWD
 make -j2 && make install
 cd -
 msg "expat installed"
+else
+	msg "expat seems to be already installed"
+fi
 ###
 
 ### install freetype to mingw
 msg "Installing freetype"
+if [ ! -d $COMPILER_PATH/$CROSS_HOST/include/freetype2 ]
+then
 freetype_ver='2.4.4'
 freetype_arc="freetype-$freetype_ver.tar.gz"
 freetype_url="http://download.savannah.gnu.org/releases/freetype/$freetype_arc"
@@ -162,12 +183,17 @@ msg $PWD
 ./configure --prefix=${COMPILER_PATH}/${CROSS_HOST} --host=${CROSS_HOST} --enable-static --disable-shared
 make -j2 && make install
 cd -
+else
+	msg "Freetype seems to be already installed, just setting vars"
+fi
 C_FREETYPE_INCLUDE=${COMPILER_PATH}/${CROSS_HOST}/include/freetype2
 msg "freetype installed"
 ###
 
 ### install fontconfig to mingw
 msg "Installing fontconfig"
+if [ ! -d $COMPILER_PATH/$CROSS_HOST/include/fontconfig ]
+then
 fontconfig_ver='2.8.0'
 fontconfig_arc="fontconfig-$fontconfig_ver.tar.gz"
 fontconfig_url="http://fontconfig.org/release/$fontconfig_arc"
@@ -182,6 +208,9 @@ sed -i -e "/\$(INSTALL)\ .libs\/libfontconfig.dll.a/d" src/Makefile # we are not
 make -j2 && make install
 cd -
 msg "fontconfig installed"
+else
+	msg "fontconfig seems to be already installed"
+fi
 ###
 
 msg "All additional libs were installed into toolchain"
@@ -192,6 +221,9 @@ msg "All additional libs were installed into toolchain"
 
 # dbcxx
 msg "Installing berkley-db"
+db_prefix="$DEP_PATH/db"
+if [ ! -d $db_prefix ]
+then
 db_ver='5.2.36'
 db_arc="db-$db_ver.tar.gz"
 db_url="http://download.oracle.com/berkeley-db/$db_arc"
@@ -201,23 +233,28 @@ get_archive $db_url $db_arc $db_md5
 db_build_dir="db-$db_ver"
 tar xzf $db_arc
 cd $db_build_dir/build_unix
-db_prefix="$DEP_PATH/db"
 ../dist/configure --prefix=$db_prefix --enable-mingw --enable-cxx \
 	--disable-shared  --host=x86_64-w64-mingw32 LIBCSO_LIBS=-lwsock32 LIBXSO_LIBS=-lwsock32
 sed -i -e "/POSTLINK.*--mode=execute/d" ./Makefile # we can't execute anything
 sed -i -e "s/\$(UTIL_PROGS)$//" Makefile # we do not need to build utils
 sed -i -e "s/install_utilities//g" Makefile # we do not need to intall utils
 make -j2 && make install 
+cd -
+else
+	msg "db seems to be already installed, just setting vars"
+fi
 BDB_INCLUDE=$db_prefix/include
 BDB_LIB=$db_prefix/lib
 BDB_VAR="\"BDB_INCLUDE_PATH=${BDB_INCLUDE}\" \"BDB_LIB_PATH=${BDB_LIB}\" "
 BQT_VARS=${BQT_VARS}${BDB_VAR}
-cd -
 msg "berkley-db installed"
 ###
 
 # boost
 msg "Installing boost"
+boost_prefix=$DEP_PATH/boost
+if [ ! -d $boost_prefix ]
+then
 boost_ver='1.47.0'
 boost_ver_='1_47_0' # TODO Generate underscored version automatically
 boost_arc="boost_$boost_ver_.tar.bz2"
@@ -228,7 +265,6 @@ get_archive $boost_url $boost_arc $boost_md5
 boost_build_dir="boost_$boost_ver_"
 tar xjf $boost_arc
 cd $boost_build_dir
-boost_prefix=$DEP_PATH/boost
 sh bootstrap.sh --with-libraries=system,filesystem,program_options,thread \
 	--prefix=$boost_prefix
 cat > tools/build/v2/user-config.jam << END
@@ -237,16 +273,22 @@ END
 ./b2 cflags="-DBOOST_THREAD_USE_LIB -static-libgcc -static-libstdc++" toolset=gcc target-os=windows threading=multi threadapi=win32 \
 	variant=release link=static --layout=tagged --with-system --with-filesystem \
 	--with-program_options --with-thread install --prefix=$boost_prefix
+cd -
+else
+	msg "boost seems to be already installed, just setting vars"
+fi
 BOOST_INCLUDE=$boost_prefix/include
 BOOST_LIB=$boost_prefix/lib
 BOOST_VAR="\"BOOST_LIB_SUFFIX=-mt\" \"BOOST_INCLUDE_PATH=${BOOST_INCLUDE}\" \"BOOST_LIB_PATH=${BOOST_LIB}\" "
 BQT_VARS=${BQT_VARS}${BOOST_VAR}
-cd -
 msg "boost installed"
 ###
 
 # openssl
 msg "Installing openssl"
+ssl_prefix="$DEP_PATH/openssl"
+if [ ! -d $ssl_prefix ]
+then
 ssl_ver='1.0.0a'
 ssl_arc="openssl-$ssl_ver.tar.gz"
 ssl_url="http://www.openssl.org/source/$ssl_arc"
@@ -256,20 +298,25 @@ get_archive $ssl_url $ssl_arc $ssl_md5
 ssl_build_dir="openssl-$ssl_ver"
 tar xzf $ssl_arc
 cd $ssl_build_dir
-ssl_prefix="$DEP_PATH/openssl"
 ./Configure no-shared --cross-compile-prefix=$CROSS_TRIPLET --prefix=$ssl_prefix mingw64
 make -j2
 make install
+cd -
+else
+	msg "openssl seems to be already installed, just setting vars"
+fi
 OPENSSL_INCLUDE=$ssl_prefix/include
 OPENSSL_LIB=$ssl_prefix/lib
 OPENSSL_VAR="\"OPENSSL_INCLUDE_PATH=${OPENSSL_INCLUDE}\" \"OPENSSL_LIB_PATH=${OPENSSL_LIB}\" "
 BQT_VARS=${BQT_VARS}${OPENSSL_VAR}
-cd -
 msg "openssl installed"
 ###
 
 # qt
 msg "installing Qt"
+qt_prefix="$DEP_PATH/qt"
+if [ ! -d $qt_prefix ]
+then
 qt_ver='4.7.4'
 qt_arc="qt-everywhere-opensource-src-$qt_ver.tar.gz"
 qt_url="http://get.qt.nokia.com/qt/source/$qt_arc"
@@ -283,7 +330,6 @@ qt_common_opts="-confirm-license -opensource -fast -no-qt3support -static -littl
 	-no-phonon -no-fontconfig -no-xmlpatterns -no-svg -no-webkit -no-javascript-jit -no-script
 	-no-scripttools -no-multimedia"
 
-qt_prefix="$DEP_PATH/qt"
 qt_builddir="build-qt-$qt_ver"
 
 configure="../$qt_src_dir/configure"
@@ -490,10 +536,13 @@ rm -f $qt_prefix/mkspecs/features/win32/rtti_off.prf
 
 cd tools/linguist/lrelease/
 make -j2 && make install
+cd -
+else
+	msg "Qt seems to be already installed, just setting vars"
+fi
 LRELEASE_VAR="\"QMAKE_LRELEASE=lrelease\" " # qt bin path is already in PATH so that's enough
 BQT_VARS=${BQT_VARS}${LRELEASE_VAR}
 export PATH=${qt_prefix}/bin:$PATH
-cd -
 msg "Qt installed"
 ###
 
@@ -502,6 +551,11 @@ msg "Qt installed"
 # clone project
 cd $PROJECT_PATH
 bqt_url="https://github.com/bitcoin/bitcoin.git"
+if [ -d bitcoin ]
+then
+	msg "There seems to be already cloned project, cleaning it"
+	rm -rf bitcoin
+fi
 msg "Cloning project to $PROJECT_PATH"
 git clone $bqt_url $PROJECT_PATH/bitcoin
 cd $PROJECT_PATH/bitcoin
@@ -523,10 +577,11 @@ do
 done
 mkdir build
 cd $_
-BQT_VAR="\"QMAKE_LFLAGS='-static -static-libgcc -static-libstdc++'\" \"USE_UPNP=-\" \"LIBS=-lssp\" "
+BQT_LFLAGS="\"QMAKE_LFLAGS=-static -static-libgcc -static-libstdc++\""
+BQT_VAR="\"USE_UPNP=-\" \"LIBS=-lssp\" "
 BQT_VARS=${BQT_VARS}${BQT_VAR}
-msg "Launching qmake on bitcoin-qt.pro with following vars: $BQT_VARS"
-qmake -spec win64-g++-cross ../bitcoin-qt.pro "$BQT_VARS"
+msg "Launching qmake on bitcoin-qt.pro with following vars: $BQT_LFLAGS $BQT_VARS"
+qmake -spec win64-g++-cross ../bitcoin-qt.pro "$BQT_LFLAGS" $BQT_VARS
 sed -i -e "s/zdll\.lib/-lz/g" Makefile.Release
 mkdir release
 make -j2
