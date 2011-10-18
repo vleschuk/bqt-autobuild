@@ -65,14 +65,19 @@ mingw_date='20110822'
 mingw_arc="mingw-w64-1.0-bin_x86_64-linux_${mingw_date}.tar.bz2"
 mingw_url="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Automated%20Builds/${mingw_arc}"
 mingw_md5='a8f9f7648ea9847f4b691c1e032c2ce0'
-mingw_patch0="float_h.patch"
+mingw_patches=( 
+	'float_h.patch'
+	)
 get_archive $mingw_url $mingw_arc $mingw_md5
 cd $COMPILER_PATH
 tar xjf $tmpdir/$mingw_arc
 
 msg "Applying changes to cross-compiler..."
-patch -p0 -f < $start_dir/$mingw_patch0 > $start_dir/mingw_patch.log
-
+>$start_dir/mingw_patch.log
+for i in "${mingw_patches[@]}"
+do
+	patch -p0 -f < $start_dir/$i >> $start_dir/mingw_patch.log
+done
 # create symbolic link to avoid case-sensitivity issue in openssl #includes 
 ln -s $COMPILER_PATH/$CROSS_HOST/include/winioctl.h $COMPILER_PATH/$CROSS_HOST/include/WinIoCtl.h
 
@@ -505,17 +510,23 @@ msg "Project cloned from $bqt_url. Revision $BQT_REV"
 #########
 
 # build project
-bqt_patch0='win32_ie_define.patch'
-bqt_patch1='pid_t.patch'
-bqt_patch2='boost_thread_win32.patch'
+bqt_patches=( 
+	'win32_ie_define.patch'
+	'pid_t.patch'
+	'boost_thread_win32.patch'
+	)
 msg "Patching project"
 >$start_dir/bqt_patch.log
-patch -p0 -f < $start_dir/$bqt_patch0 >> $start_dir/bqt_patch.log
-patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
-patch -p0 -f < $start_dir/$bqt_patch1 >> $start_dir/bqt_patch.log
+for i in "${bqt_patches[@]}"
+do
+	patch -p0 -f < $start_dir/${i} >> $start_dir/bqt_patch.log
+done
 mkdir build
 cd $_
-qmake -spec win64-g++-cross ../bitcoin-qt.pro $BQT_VARS
+BQT_VAR="\"QMAKE_LFLAGS='-static -static-libgcc -static-libstdc++'\" \"USE_UPNP=-\" \"LIBS=-lssp\" "
+BQT_VARS=${BQT_VARS}${BQT_VAR}
+msg "Launching qmake on bitcoin-qt.pro with following vars: $BQT_VARS"
+qmake -spec win64-g++-cross ../bitcoin-qt.pro "$BQT_VARS"
 sed -i -e "s/zdll\.lib/-lz/g" Makefile.Release
 mkdir release
 make -j2
