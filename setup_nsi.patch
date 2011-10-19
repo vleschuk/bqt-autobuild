@@ -1,0 +1,44 @@
+--- share.orig/setup.nsi	2011-10-19 17:50:19.359349327 +0400
++++ share/setup.nsi	2011-10-19 17:51:05.742431381 +0400
+@@ -45,8 +45,8 @@
+ !insertmacro MUI_LANGUAGE English
+ 
+ # Installer attributes
+-OutFile bitcoin-0.5.0-win32-setup.exe
+-InstallDir $PROGRAMFILES\Bitcoin
++OutFile bitcoin-0.5.0-win64-setup.exe
++InstallDir $PROGRAMFILES64\Bitcoin
+ CRCCheck on
+ XPStyle on
+ BrandingText " "
+@@ -69,12 +69,8 @@
+     File ../bitcoin-qt.exe
+     File /oname=license.txt ../COPYING
+     File /oname=readme.txt ../doc/README_windows.txt
+-    SetOutPath $INSTDIR\daemon
+-    File ../src/bitcoind.exe
+     SetOutPath $INSTDIR\locale
+     File /r ../locale/*.*
+-    SetOutPath $INSTDIR\src
+-    File /r /x *.exe /x *.o ../src\*.*
+     SetOutPath $INSTDIR
+     WriteRegStr HKCU "${REGKEY}\Components" Main 1
+ SectionEnd
+@@ -116,9 +112,7 @@
+     Delete /REBOOTOK $INSTDIR\bitcoin-qt.exe
+     Delete /REBOOTOK $INSTDIR\license.txt
+     Delete /REBOOTOK $INSTDIR\readme.txt
+-    RMDir /r /REBOOTOK $INSTDIR\daemon
+     RMDir /r /REBOOTOK $INSTDIR\locale
+-    RMDir /r /REBOOTOK $INSTDIR\src
+     DeleteRegValue HKCU "${REGKEY}\Components" Main
+ SectionEnd
+ 
+@@ -145,6 +139,7 @@
+ 
+ # Installer functions
+ Function .onInit
++    SetRegView 64
+     InitPluginsDir
+ FunctionEnd
+ 

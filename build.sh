@@ -589,16 +589,15 @@ mkdir -p package/locale
 cp release/bitcoin-qt.exe package/
 cp ../src/qt/locale/*.qm package/locale/
 cp -r ../share package/
-rm -f package/share/setup.nsi
 cp ../COPYING package/
 mkdir package/doc
 cp ../doc/README_windows.txt package/doc/
-cp -f $start_dir/setup64.nsi package/share
-bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
 cd package
+patch -p0 -f < $start_dir/setup_nsi.patch >> $start_dir/setup_patch.log
+bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
 zip -r $bqt_pkg ./*
 cd $start_dir
 msg "Project built. Archive $bqt_pkg ."
-msg "To build an installation package unzip the archive, go to share subdirectory and run 'makensis ./setup64.nsi'"
+msg "To build an installation package unzip the archive, go to share subdirectory and run 'makensis ./setup.nsi'"
 #########
 restore_output
