@@ -585,10 +585,20 @@ qmake -spec win64-g++-cross ../bitcoin-qt.pro "$BQT_LFLAGS" $BQT_VARS
 sed -i -e "s/zdll\.lib/-lz/g" Makefile.Release
 mkdir release
 make -j2
+mkdir -p package/locale
+cp release/bitcoin-qt.exe package/
+cp ../src/qt/locale/*.qm package/locale/
+cp -r ../share package/
+rm -f package/share/setup.nsi
+cp ../COPYING package/
+mkdir package/doc
+cp ../doc/README_windows.txt package/doc/
+cp -f $start_dir/setup64.nsi package/share
 bqt_pkg="$start_dir/bitcoin_win64_$BQT_REV.zip"
-zip -r $bqt_pkg release
-msg "Project built. Archive $bqt_pkg"
-cd -
+cd package
+zip -r $bqt_pkg ./*
+cd $start_dir
+msg "Project built. Archive $bqt_pkg ."
+msg "To build an installation package unzip the archive, go to share subdirectory and run 'makensis ./setup64.nsi'"
 #########
 restore_output
-cd $start_dir
